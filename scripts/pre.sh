@@ -9,9 +9,7 @@
 
 source  /etc/profile.d/modules.sh
 module use /g/data/hh5/public/modules
-module use ~access/modules
 module load conda/analysis3
-module load pythonlib/umfile_utils/access_cm2
 
 set -eu
 
