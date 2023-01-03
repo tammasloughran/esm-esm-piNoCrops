@@ -9,7 +9,9 @@
 
 source  /etc/profile.d/modules.sh
 module use /g/data/hh5/public/modules
+module use ~access/modules
 module load conda/analysis3
+module load pythonlib/umfile_utils/access_cm2
 
 set -eu
 
@@ -20,11 +22,16 @@ lu_file=$1
 year=$(mule-pumf --component fixed_length_header work/atmosphere/restart_dump.astart | sed -n 's/.*t2_year\s*:\s*//p')
 
 # If that year is in the land use file, save a single timestep to a new netcdf file
-if cdo selyear,$(( year )) -chname,fraction,field1391 $lu_file work/atmosphere/land_frac.nc; then
-
-    # Back up the original restart file
-    mv work/atmosphere/restart_dump.astart work/atmosphere/restart_dump.astart.orig
-
-    # Use the CSIRO script to set the land use
-    python scripts/update_cable_vegfrac.py -i work/atmosphere/restart_dump.astart.orig -o work/atmosphere/restart_dump.astart -f work/atmosphere/land_frac.nc
+year_in_file=$(cdo showdate $lu_file)
+if [[ $year == ${year_in_file:2:4} ]]; then
+    cdo selyear,$(( year )) -chname,fraction,field1391 $lu_file work/atmosphere/land_frac.nc
+else
+    # Set the year in the file to the current year
+    cdo setyear,${year} -chname,fraction,field1391 $lu_file work/atmosphere/land_frac.nc
 fi
+
+# Back up the original restart file
+mv work/atmosphere/restart_dump.astart work/atmosphere/restart_dump.astart.orig
+
+# Use the CSIRO script to set the land use
+python scripts/update_cable_vegfrac.py -i work/atmosphere/restart_dump.astart.orig -o work/atmosphere/restart_dump.astart -f work/atmosphere/land_frac.nc

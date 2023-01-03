@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # Update CABLE vegfrac field and set new tiles to the grid box mean
 # Arguments are the old and new dump file and the new vegetation fraction ancillary
 

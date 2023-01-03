@@ -58,7 +58,7 @@ runspersub: 1
 
 userscripts:
     # Setup land use changes
-    setup: ./scripts/pre.sh /g/data/p66/tfl561/sensitivity_lu_map/all_years_no_humans_CABLE_fraction.nc
+    setup: ./scripts/pre.sh /g/data/p66/tfl561/sensitivity_lu_map/1850_no_humans_CABLE_fraction.nc
 
 stacksize: unlimited
 
