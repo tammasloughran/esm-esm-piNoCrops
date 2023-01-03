@@ -1,4 +1,4 @@
-jobname: esm-pre-industrial
+jobname: esm-piNoCrops
 queue: normal
 walltime: 3:10:00
 
@@ -55,6 +55,10 @@ calendar:
         days: 0
 
 runspersub: 1
+
+userscripts:
+    # Setup land use changes
+    setup: ./scripts/pre.sh /g/data/p66/tfl561/sensitivity_lu_map/all_years_no_humans_CABLE_fraction.nc
 
 stacksize: unlimited
 
