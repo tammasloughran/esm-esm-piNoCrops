@@ -347,8 +347,8 @@
  L_CO2_INTERACTIVE=.TRUE.,
  L_CO2_EMITS= .FALSE.,
  L_CO2_TRACER=.TRUE.,
- L_CO2_MASS=.TRUE., # According to Tilo, this enables UM bugfix.
- L_CO2_RADIATION=.TRUE. # According to Tilo, this enables UM bugfix.
+ L_CO2_MASS=.TRUE., ! According to Tilo, this enable a bugfix in the UM.
+ L_CO2_RADIATION=.TRUE., ! According to Tilo, this enable a bugfix in the UM.
  L_TRACER_MASS=.TRUE.,
  I_TRACERMASS_START=1,
  L_CABLE=.TRUE.,

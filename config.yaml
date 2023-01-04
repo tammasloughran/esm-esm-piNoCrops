@@ -1,6 +1,13 @@
 jobname: esm-piNoCrops
 queue: normal
 walltime: 3:10:00
+storage: # For me, payu couldn't properly recognise that p66 is needed. I've added it here.
+    gdata:
+        - access
+        - hh5
+        - p66
+    scratch:
+        - p66
 
 # note: if laboratory is relative path, it is relative to /scratch/$PROJECT/$USER
 laboratory: access-esm

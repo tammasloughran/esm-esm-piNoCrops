@@ -248,8 +248,8 @@
  L_PHASE_LIM=.TRUE.,
  L_CO2_INTERACTIVE=.TRUE.,
  L_CO2_EMITS= .FALSE.,
- L_CO2_MASS=.TRUE., # According to Tilo, this enables UM bugfix.
- L_CO2_RADIATION=.TRUE., # According to Tilo, this enables UM bugfix.
+ L_CO2_MASS=.TRUE., ! According to Tilo, this enable a bugfix in the UM.
+ L_CO2_RADIATION=.TRUE., ! According to Tilo, this enable a bugfix in the UM.
  L_Q10= .TRUE.,
  L_VEG_FRACS=.TRUE.,
  L_TRIFFID=.FALSE.,
