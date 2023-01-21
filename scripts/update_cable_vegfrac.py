@@ -46,7 +46,9 @@ for k in range(f.fixhd[FH_LookupSize2]):
         old_previous_year.append(f.readfld(k))
 assert len(old_vegfrac)==NTILES, 'Error - expected %d vegetation classes' % NTILES
 old_vegfrac = np.array(old_vegfrac)
+old_vegfrac[old_vegfrac==f.missval_r] = np.nan
 old_previous_year = np.array(old_previous_year)
+old_previous_year[old_previous_year==f.missval_r] = np.nan
 
 if args.fracfile.endswith(".nc"):
     # Read from a netCDF version of a dump file
@@ -58,7 +60,7 @@ if args.fracfile.endswith(".nc"):
     vegfrac = vegfrac.astype(old_vegfrac.dtype)
     # Normalise sums to exactly 1
     vegfrac /= vegfrac.sum(axis=0)
-    vegfrac[old_vegfrac==f.missval_r] = f.missval_r
+    vegfrac[old_vegfrac==f.missval_r] = np.nan
     d.close()
 else:
     # Read the vegetation fraction ancillary
@@ -80,12 +82,11 @@ if np.all(old_vegfrac==vegfrac)&np.all(old_vegfrac==old_previous_year):
     print("Vegetation fields are identical. No output file created")
     sys.exit(0)
 
-# # Check that the masks are identical
-# old_mask = (old_vegfrac == f.missval_r)
-# new_mask = (vegfrac == f.missval_r)
-# if not np.all(old_mask == new_mask):
-#     print("Error - land sea masks are different")
-#     sys.exit(1)
+# Check that the masks are identical
+old_mask = (old_vegfrac==f.missval_r)
+new_mask = (vegfrac==f.missval_r)
+if not np.all(old_mask == new_mask):
+    sys.exit("Error - land sea masks are different")
 
 # Fix all 800 tiled CABLE variables
 output_file = umfile.UMFile(args.ofile, "w")
@@ -110,25 +111,30 @@ while k < f.fixhd[FH_LookupSize2]:
                 sys.exit(1)
             vlist.append(f.readfld(k+i))
         var = np.array(vlist)
+        if not var.dtype==np.int:
+            var[var==f.missval_r] = np.nan
         # Grid box cover fraction weighted mean.
-        mean = (var*old_vegfrac).sum(axis=0)
+        mean = np.nansum(var*old_vegfrac, axis=0)
         if var.dtype==np.int:
             # 3 layer snow flag is an integer field
             mean = np.round(mean).astype(np.int)
-        # If old fraction was zero and new > 0, set to grid box mean
-        var = np.where(np.logical_and(old_vegfrac==0, vegfrac>0), mean, var)
+        if code in [801,802,803,804,805,806,825,826,827,884,885]:
+            # If old fraction was zero and new>0, set to grid box mean
+            var = np.where(np.logical_and(old_vegfrac==0, vegfrac>0), mean, var)
         # Set tiles with new zero fraction to zero
-        var[vegfrac==0] = 0.0
+        #var[vegfrac==0] = 0.0
         # Put missing values back into field
         var[old_vegfrac==f.missval_r] = f.missval_r
         if ilookup[ITEM_CODE]==PREV_VEGFRAC_CODE:
             # If we are resetting the previous year's cover fractions, just use old-vegfrac.
             var = old_vegfrac
+        var[var==np.nan] = f.missval_r
         for i in range(NTILES):
             output_file.writefld(var[i], k+i)
         k += NTILES
     elif ilookup[ITEM_CODE]==VEGFRAC_CODE:
         # Set the new vegetation fractions
+        vegfrac[vegfrac==np.nan] = f.missval_r
         for i in range(NTILES):
             output_file.writefld(vegfrac[i], k+i)
         k += NTILES
