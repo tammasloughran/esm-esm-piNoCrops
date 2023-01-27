@@ -3,11 +3,13 @@
 # Arguments are the old and new dump file and the new vegetation fraction ancillary.
 # Note: the variable name vegfrac does not refer to fractions of only vegetated types, but rather
 # tile fractions of any type.
+# Author: Martin Dix, Tammas Loughran
 import argparse
 import sys
 
 import netCDF4
 import numpy as np
+
 import umfile
 from um_fileheaders import *
 
@@ -16,11 +18,32 @@ VEGFRAC_CODE = 216
 PREV_VEGFRAC_CODE = 835
 MASK_CODE = 30
 
+
+def get_field(restart_file, code):
+    """Get field `code` from a UM restart file. Replaces missing values with np.nan.
+    """
+    var = []
+    for k in range(restart_file.fixhd[FH_LookupSize2]):
+        ilookup = restart_file.ilookup[k]
+        lbegin = ilookup[LBEGIN]
+        if lbegin==-99: break
+        if ilookup[ITEM_CODE]==code: var.append(restart_file.readfld(k))
+    var = np.array(var)
+    var[var==restart_file.missval_r] = np.nan
+    return var
+
+
 # Parse arguments.
 parser = argparse.ArgumentParser(description="Update vegetation fractions in dump file")
-parser.add_argument('-i', dest='ifile', help='Input UM dump')
-parser.add_argument('-o', dest='ofile', help='Output UM dump')
-parser.add_argument('-f', dest='fracfile', help='New vegetation fraction (ancillary or netCDF)')
+parser.add_argument('-i', dest='ifile', help="Input UM dump")
+parser.add_argument('-o', dest='ofile', help="Output UM dump")
+parser.add_argument('-f', dest='fracfile', help="New vegetation fraction (ancillary or netCDF)")
+parser.add_argument(
+        '-n',
+        dest='name_fracvar',
+        default='field1391',
+        help="Name of the fraction variable in the netCDF file",
+        )
 parser.add_argument(
         '-v',
         '--verbose',
@@ -31,80 +54,63 @@ parser.add_argument(
         )
 args = parser.parse_args()
 
-# Get old vegetation fraction from dump file
+# Get old vegetation fraction from dump file.
 f = umfile.UMFile(args.ifile)
-old_vegfrac = []
-old_previous_year = []
-for k in range(f.fixhd[FH_LookupSize2]):
-    ilookup = f.ilookup[k]
-    lbegin = ilookup[LBEGIN]
-    if lbegin==-99:
-        break
-    if ilookup[ITEM_CODE]==VEGFRAC_CODE:
-        old_vegfrac.append(f.readfld(k))
-    if ilookup[ITEM_CODE]==PREV_VEGFRAC_CODE:
-        old_previous_year.append(f.readfld(k))
+old_vegfrac = get_field(f, VEGFRAC_CODE)
+old_previous_year = get_field(f, PREV_VEGFRAC_CODE)
 assert len(old_vegfrac)==NTILES, 'Error - expected %d vegetation classes' % NTILES
-old_vegfrac = np.array(old_vegfrac)
-old_vegfrac[old_vegfrac==f.missval_r] = np.nan
-old_previous_year = np.array(old_previous_year)
-old_previous_year[old_previous_year==f.missval_r] = np.nan
+assert len(old_previous_year)==NTILES, 'Error - expected %d vegetation classes' % NTILES
 
 if args.fracfile.endswith(".nc"):
-    # Read from a netCDF version of a dump file
-    d = netCDF4.Dataset(args.fracfile)
-    v = d.variables['field1391']
-    # There may be some points outside the valid range
+    # Read from a netCDF version of a dump file.
+    ncfile = netCDF4.Dataset(args.fracfile)
+    v = ncfile.variables[args.name_fracvar]
+
+    # There may be some points outside the valid range.
     v.set_auto_mask(False)
-    vegfrac = v[0]
+    vegfrac = v[:].squeeze()
     vegfrac = vegfrac.astype(old_vegfrac.dtype)
-    # Normalise sums to exactly 1
-    vegfrac /= vegfrac.sum(axis=0)
-    vegfrac[old_vegfrac==f.missval_r] = np.nan
-    d.close()
+
+    # Normalise sums to exactly 1.
+    #vegfrac /= vegfrac.sum(axis=0)
+    vegfrac[vegfrac==f.missval_r] = np.nan
+    ncfile.close()
 else:
     # Read the vegetation fraction ancillary
     ffrac = umfile.UMFile(args.fracfile)
-    vegfrac = []
-    for k in range(ffrac.fixhd[FH_LookupSize2]):
-        ilookup = ffrac.ilookup[k]
-        lbegin = ilookup[LBEGIN]
-        if lbegin==-99:
-            break
-        assert ilookup[ITEM_CODE]==VEGFRAC_CODE, "Field with unexpected stash code %s" % ilookup[ITEM_CODE]
-        vegfrac.append(ffrac.readfld(k))
-    # Create a single array with dimensions [vegtype,lat,lon]
-    vegfrac = np.array(vegfrac)
+    vegfrac = get_field(ffrac, VEGFRAC_CODE)
+    ffrac.close()
 
 assert vegfrac.shape[0]==NTILES, 'Error - expected %d vegetation classes' % NTILES
 
+# Check that there are changes in the vegetation fraction for the current and previous year.
 if np.all(old_vegfrac==vegfrac)&np.all(old_vegfrac==old_previous_year):
     print("Vegetation fields are identical. No output file created")
     sys.exit(0)
 
-# Check that the masks are identical
+# Check that the masks are identical.
 old_mask = (old_vegfrac==f.missval_r)
 new_mask = (vegfrac==f.missval_r)
 if not np.all(old_mask == new_mask):
     sys.exit("Error - land sea masks are different")
 
-# Fix all 800 tiled CABLE variables
+# Update or copy fields to new restart file.
 output_file = umfile.UMFile(args.ofile, "w")
 output_file.copyheader(f)
 k = 0
-while k < f.fixhd[FH_LookupSize2]:
+while k<f.fixhd[FH_LookupSize2]:
     ilookup = f.ilookup[k]
     lbegin = ilookup[LBEGIN]
     if lbegin==-99:
         break
-    if 800<=ilookup[ITEM_CODE]<920 and ilookup[ITEM_CODE] not in [883,884,885,887,888]:
-        # Initialize soil quantities and CNP pools if new tiles were created.
+
+    # Initialize soil and snow temperatures if new tiles were created.
+    if ilookup[ITEM_CODE] in [801,802,803,804,805,806,825,826,827]:
         code = ilookup[ITEM_CODE]
         if args.verbose:
-            print("Processing", code)
+            print("Updating", code)
         vlist = [f.readfld(k)]
-        # Expect another 16 fields with the same code
-        for i in range(1, NTILES):
+        for i in range(1, NTILES): # Expect another 16 fields with the same code.
             ilookup = f.ilookup[k+i]
             if ilookup[ITEM_CODE]!=code:
                 print("Missing tiled fields with", code, k, i)
@@ -113,45 +119,52 @@ while k < f.fixhd[FH_LookupSize2]:
         var = np.array(vlist)
         if not var.dtype==np.int:
             var[var==f.missval_r] = np.nan
+
         # Grid box cover fraction weighted mean.
         mean = np.nansum(var*old_vegfrac, axis=0)
         if var.dtype==np.int:
-            # 3 layer snow flag is an integer field
+            # 3 layer snow flag is an integer field.
             mean = np.round(mean).astype(np.int)
-        if code in [801,802,803,804,805,806,825,826,827,884,885]:
-            # If old fraction was zero and new>0, set to grid box mean
-            var = np.where(np.logical_and(old_vegfrac==0, vegfrac>0), mean, var)
-        # Set tiles with new zero fraction to zero
-        #var[vegfrac==0] = 0.0
-        # Put missing values back into field
+
+        # If old fraction was zero and new>0, set to grid box mean.
+        var = np.where(np.logical_and(old_vegfrac==0, vegfrac>0), mean, var)
+
+        # Put missing values back into field and insert into restart file.
         var[old_vegfrac==f.missval_r] = f.missval_r
-        if ilookup[ITEM_CODE]==PREV_VEGFRAC_CODE:
-            # If we are resetting the previous year's cover fractions, just use old-vegfrac.
-            var = old_vegfrac
         var[var==np.nan] = f.missval_r
         for i in range(NTILES):
             output_file.writefld(var[i], k+i)
         k += NTILES
+
+    # If we are resetting the previous year's cover fractions, just use old_vegfrac.
+    elif ilookup[ITEM_CODE]==PREV_VEGFRAC_CODE:
+        var = old_vegfrac
+        var[var==np.nan] = f.missval_r
+        for i in range(NTILES):
+            output_file.writefld(var[i], k+i)
+        k += NTILES
+
+    # Set the new vegetation fractions for the current year.
     elif ilookup[ITEM_CODE]==VEGFRAC_CODE:
-        # Set the new vegetation fractions
         vegfrac[vegfrac==np.nan] = f.missval_r
         for i in range(NTILES):
             output_file.writefld(vegfrac[i], k+i)
         k += NTILES
     else:
         if ilookup[ITEM_CODE]==MASK_CODE:
-            # Save the mask (needed for compression)
+            # Save the mask (needed for compression).
             mask = f.readfld(k)
             output_file.writefld(mask, k)
             output_file.mask = mask
         else:
+            # Copy the remaining restat fields to the new file.
             data = f.readfld(k, raw=True)
             output_file.writefld(data, k, raw=True)
         k += 1
 
 output_file.close()
 
-# List of stashvar codes
+# List of stashvar codes.
 #s03i801:long_name = "CABLE SOIL TEMPERATURE ON TILES LAYER 1" ;
 #s03i802:long_name = "CABLE SOIL TEMPERATURE ON TILES LAYER 2" ;
 #s03i803:long_name = "CABLE SOIL TEMPERATURE ON TILES LAYER 3" ;
