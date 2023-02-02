@@ -22,14 +22,24 @@ year=$(mule-pumf --component fixed_length_header work/atmosphere/restart_dump.as
 # If that year is in the land use file, save a single timestep to a new netcdf file
 year_in_file=$(cdo showdate $lu_file)
 if [[ $year == ${year_in_file:2:4} ]]; then
-    cdo selyear,$(( year )) -chname,fraction,field1391 $lu_file work/atmosphere/land_frac.nc
+    cdo selyear,$(( year )) $lu_file work/atmosphere/land_frac.nc
 else
     # Set the year in the file to the current year
-    cdo setyear,${year} -chname,fraction,field1391 $lu_file work/atmosphere/land_frac.nc
+    cdo setyear,${year} $lu_file work/atmosphere/land_frac.nc
 fi
 
 # Back up the original restart file
 mv work/atmosphere/restart_dump.astart work/atmosphere/restart_dump.astart.orig
 
 # Use the CSIRO script to set the land use
-python scripts/update_cable_vegfrac.py -i work/atmosphere/restart_dump.astart.orig -o work/atmosphere/restart_dump.astart -f work/atmosphere/land_frac.nc
+python scripts/update_cable_vegfrac.py \
+        -i work/atmosphere/restart_dump.astart.orig \
+        -o work/atmosphere/restart_dump.astart \
+        -f work/atmosphere/land_frac.nc \
+        -n fraction
+
+# If nothing was done, then copy the restart file back.
+if [[ ! -e work/atmosphere/restart_dump.astart ]]; then
+    echo "Using the cover fractions from the existing restart file."
+    cp work/atmosphere/restart_dump.astart.orig work/atmosphere/restart_dump.astart
+fi
