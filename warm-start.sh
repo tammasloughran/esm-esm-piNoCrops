@@ -13,11 +13,11 @@ source=CSIRO
 if [ $source == "CSIRO" ]; then
 
     # CSIRO job to copy the warm start from
-    project=p66
+    project=p73
     user=txz599
     export expname=PI-C2C-1p5r42            # Source experiment - PI pre-industrial, HI historical
     export source_year=700          # Change this to create different ensemble members
-    export csiro_source=/g/data/$project/$user/archive/ACCESS-ESM1-5/$expname/restart
+    export csiro_source=/g/data/$project/archive/CMIP6/ACCESS-ESM1-5/$expname/restart
 
     # Call the main warm-start script
     scripts/warm-start-csiro.sh

@@ -117,14 +117,9 @@ while k<f.fixhd[FH_LookupSize2]:
                 sys.exit(1)
             vlist.append(f.readfld(k+i))
         var = np.array(vlist)
-        if not var.dtype==np.int:
-            var[var==f.missval_r] = np.nan
 
         # Grid box cover fraction weighted mean.
         mean = np.nansum(var*old_vegfrac, axis=0)
-        if var.dtype==np.int:
-            # 3 layer snow flag is an integer field.
-            mean = np.round(mean).astype(np.int)
 
         # If old fraction was zero and new>0, set to grid box mean.
         var = np.where(np.logical_and(old_vegfrac==0, vegfrac>0), mean, var)
