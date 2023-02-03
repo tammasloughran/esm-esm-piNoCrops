@@ -4,7 +4,7 @@
 
 # Sets the appropriate land use for the model start date.
 # The model doesn't vary the land use itself, this is instead done as a
-# post-processing step - the old land use values are moved to a new STASH code,
+# pre-processing step - the old land use values are moved to a new STASH code,
 # and new land use values are read in from an external file.
 
 source  /etc/profile.d/modules.sh
@@ -21,11 +21,11 @@ year=$(mule-pumf --component fixed_length_header work/atmosphere/restart_dump.as
 
 # If that year is in the land use file, save a single timestep to a new netcdf file
 year_in_file=$(cdo showdate $lu_file)
-if [[ $year == ${year_in_file:2:4} ]]; then
+if [[ $year_in_file =~ $year ]]; then
     cdo selyear,$(( year )) $lu_file work/atmosphere/land_frac.nc
 else
     # Set the year in the file to the current year
-    cdo setyear,${year} $lu_file work/atmosphere/land_frac.nc
+    cdo setyear,$year $lu_file work/atmosphere/land_frac.nc
 fi
 
 # Back up the original restart file
