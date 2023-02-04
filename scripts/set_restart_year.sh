@@ -22,7 +22,7 @@ module use /g/data/hh5/public/modules
 module load conda/analysis3
 module load nco
 
-set -eux
+set -eu
 trap "echo Error in set_restart_year.sh" ERR
 export UMDIR=~access/umdir
 
