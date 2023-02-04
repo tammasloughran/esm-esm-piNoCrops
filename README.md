@@ -30,7 +30,7 @@ Set up a warm start from a CSIRO run (see the script for details):
 
     ./warm_start.sh
 
-The warm start is the PI-C2C-
+The warm start for this experiment is the PI-C2C-1p5r4 spin up.
 
 Run the model:
 
