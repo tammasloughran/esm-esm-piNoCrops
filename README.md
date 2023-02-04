@@ -4,6 +4,9 @@
 
 A pre-industrial smiulation with interactive carbon cycle enabled and no crops.
 
+Crops have been replaced with forests in the proportion of the existing forest of the same grid
+cell or from the nearest forested grid cell.
+
 ## Quickstart Guide
 
 
@@ -16,12 +19,18 @@ Create a directory in which to keep the model configurations:
 
     mkdir -p ~/access-esm
     cd ~/access-esm
-    git clone https://github.com/coecms/esm-pre-industrial
-    cd esm-pre-industrial
+    git clone https://github.com/tammasloughran/esm-esm-piNoCrops.git
+    cd esm-esm-piNoCrops
 
 We strongly recommend to switch to a new branch for the running of the model:
 
     git checkout -b runs
+
+Set up a warm start from a CSIRO run (see the script for details):
+
+    ./warm_start.sh
+
+The warm start is the PI-C2C-
 
 Run the model:
 
@@ -38,6 +47,25 @@ The default configuration is a 1 year per model run. To run the model for, say, 
 **Note:**
 We have noticed that some modules interfere with the git commands, for example `matlab/R2018a`.
 If you are running into issues during the installation, it might be a good idea to `module purge` first before starting again.
+
+## Warm Starts
+
+The model is normally 'warm started' from the restart files of another
+configuration. For instance the SSP experiments are started from the end of the
+historical experiment, and in turn the historical experiment is started from
+the pre-industrial control experiment (different ensemble members are created
+by starting from different piControl years). Starting the experiment from
+scratch requires a long period of spinup to ensure stability and should be
+avoided if possible.
+
+There are two options for restarting the model. It can be started from an
+experiment run by CSIRO (requires membership in the p66 group), or it can be
+started from another Payu experiment.
+
+To perform a warm start, edit the file `warm-start.sh` to set the experiment
+directory to start from and then run the script. For CSIRO jobs you must also
+specify the date of the run to start from, for Payu jobs each restart directory
+holds a different year.
 
 ## Understanding **payu**
 
@@ -126,8 +154,8 @@ Create a directory in your home directory to keep all the Control Directories yo
 
 Then clone the most recent version of the ACCESS-ESM control directory:
 
-    git clone https://github.com/coecms/esm-pre-industrial
-    cd esm-pre-industrial
+    git clone https://github.com/tammasloughran/esm-esm-piNoCrops.git
+    cd esm-esm-piNoCrops
 
 Every time you run the model, payu will check whether anything has changed, including the configuration
 files, the ancillary files, and executables. If anything has changed, it will create a new
@@ -147,7 +175,7 @@ Open the `config.yaml` file with your preferred text editor.
 
 Let's have a closer look at the parts:
 
-    jobname: pre-industrial
+    jobname: esm-piNoCrops
     queue: normal
     walltime: 20:00:00
 
