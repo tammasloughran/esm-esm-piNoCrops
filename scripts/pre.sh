@@ -43,3 +43,16 @@ if [[ ! -e work/atmosphere/restart_dump.astart ]]; then
     echo "Using the cover fractions from the existing restart file."
     cp work/atmosphere/restart_dump.astart.orig work/atmosphere/restart_dump.astart
 fi
+
+# Occasionally, ACCESS-ESM1.5 will crash from a grid cell storm. A grid cell storm is numerical
+# instability from a coincidence of conditions in just a few grid cells. The workarround is to
+# add some small perturbations to the last reastart file to eventually avoid the storm entirely.
+
+module purge
+module use ~access/modules
+module load pythonlib/umfile_utils
+
+if [[ $year == 127 ]]; then
+    echo "Restart file has been perturbed at year $year to avoid a crash."
+    scripts/perturbIC.py work/atmosphere/restart_dump.astart -s $year
+fi
