@@ -52,7 +52,8 @@ module purge
 module use ~access/modules
 module load pythonlib/umfile_utils
 
+echo "Year is $year and we want 127" >this.txt
 if [[ $year == 127 ]]; then
-    echo "Restart file has been perturbed at year $year to avoid a crash."
+    echo "Restart file has been perturbed at year $year to avoid a crash." >>this.txt
     scripts/perturbIC.py work/atmosphere/restart_dump.astart -s $year
 fi
