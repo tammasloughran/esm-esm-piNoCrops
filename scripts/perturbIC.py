@@ -23,7 +23,7 @@ try:
         elif opt[0] == '-s':
             seed = int(opt[1])
 except getopt.error:
-    print "Usage: perturbIC [-a amplitude] [-v variable (stashcode)] [-s seed] file"
+    print("Usage: perturbIC [-a amplitude] [-v variable (stashcode)] [-s seed] file")
     sys.exit(2)
 
 ifile = args[0]
